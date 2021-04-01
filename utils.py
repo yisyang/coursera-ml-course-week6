@@ -184,7 +184,7 @@ def get_img_embeds(validate_only=False):
     val_img_embeds = read_pickle('val_img_embeds.pickle')
 
     # # Check shapes
-    # print('Train img', train_img_embeds.shape)
+    # print('Train img', train_img_embeds.shape)                            # n 2048
     # print('Test img', val_img_embeds.shape)
 
     return train_img_embeds, val_img_embeds

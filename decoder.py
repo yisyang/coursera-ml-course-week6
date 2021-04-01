@@ -90,5 +90,24 @@ class DecoderV2:
 
         return
 
-    def run(self):
+
+class EncoderV2:
+    def __init__(self):
+        self.prepared = False
+        self.model = None
+        self.preprocessor = None
         self.prepare()
+        return
+
+    # we take the last hidden layer of IncetionV3 as an image embedding
+    def prepare(self):
+        K.set_learning_phase(False)
+        app = keras.applications.InceptionV3(include_top=False)
+        out = L.GlobalAveragePooling2D()(app.output)
+
+        self.model = keras.Model(inputs=app.inputs, outputs=out)
+        self.preprocessor = keras.applications.inception_v3.preprocess_input
+
+        self.prepared = True
+
+        return

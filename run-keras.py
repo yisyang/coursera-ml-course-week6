@@ -1,9 +1,10 @@
+import os
 from tensorflow import keras
 import numpy as np
 import utils
 import click
-from decoder import DecoderV2
-
+from decoder import DecoderV2, EncoderV2
+from matplotlib import pyplot as plt
 
 L = keras.layers
 K = keras.backend
@@ -29,8 +30,10 @@ def main(mode: str = 'train', load_checkpoint: int = 0):
         train(load_checkpoint)
     elif mode in ['validate', 'v']:
         validate(load_checkpoint)
-    else:
+    elif mode in ['predict', 'p']:
         predict(load_checkpoint)
+    else:
+        test(load_checkpoint)
 
 
 def train(continue_epoch: int = None):
@@ -114,7 +117,7 @@ def validate(continue_epoch, n_batches=50, model=None, val_img_embeds=None, val_
     print(f'Epoch: {epoch}  Val loss: {val_loss:.4}')
 
 
-def predict(continue_epoch):
+def test(continue_epoch):
     epoch = continue_epoch or 0
     _, val_captions_indexed, vocab = utils.get_captions_indexed(True)
     _, val_img_embeds = utils.get_img_embeds(True)
@@ -148,6 +151,57 @@ def predict(continue_epoch):
 
     words_val = [vocab_inverse[v] for v in sentences[0] if v > 3]
     print('val: ', ' '.join(words_val))
+
+
+def predict(continue_epoch):
+    epoch = continue_epoch or 0
+    encoder = EncoderV2()
+
+    # look at validation prediction example
+    def apply_model_to_image_raw_bytes(raw):
+        img = utils.decode_image_from_buf(raw)
+        # plt.figure(figsize=(7, 7))
+        # plt.grid('off')
+        # plt.axis('off')
+        # plt.imshow(img)
+        # plt.show()
+        img = utils.crop_and_preprocess(img, (IMG_SIZE, IMG_SIZE), encoder.preprocessor)
+        return img
+
+    _, val_captions_indexed, vocab = utils.get_captions_indexed(True)
+    update_img_embed_size(2048)                                     # Optimize
+    decoder = DecoderV2(vocab, IMG_EMBED_SIZE, epoch)
+    model = decoder.model
+    batch_size = 1
+    start_idx = vocab[START]
+    end_idx = vocab[END]
+
+    vocab_inverse = {idx: w for w, idx in vocab.items()}
+
+    examples_dir = './examples'
+    for filename in os.listdir(examples_dir):
+        filepath = os.path.join(examples_dir, filename)
+        print(f'Now processing {filepath}.')
+        with open(filepath, 'rb') as fh:
+            img_i = apply_model_to_image_raw_bytes(fh.read())
+            img_i = img_i.reshape(1, IMG_SIZE, IMG_SIZE, 3)
+            # print(img_i.shape)                                    # 1 299 299 3
+            img_embeds = encoder.model.predict(img_i)
+            # print(img_embeds.shape)                               # 1 2048
+
+        # Start with #START# and keep predicting until #END#
+        words_in = np.full(shape=(batch_size, 1), fill_value=start_idx)         # shape 1 1
+        pred = [[start_idx]]                                                    # placeholder
+        while pred[0][-1] != end_idx and len(pred[0]) < 25:
+            y = model.predict(x=[img_embeds, words_in])                         # shape 1 i 8769
+            pred = np.argmax(y, axis=2)                                         # shape 1 i
+            words_in = np.insert(pred, 0, start_idx, axis=1)                    # shape 1 i+1
+            print(pred[0], end='\r')
+
+        print('')
+
+        words_pred = [vocab_inverse[v] for v in pred[0] if v > 3]
+        print('pred: ', ' '.join(words_pred))
 
 
 def update_img_embed_size(new_size=None):
