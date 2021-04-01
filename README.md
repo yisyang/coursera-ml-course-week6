@@ -28,7 +28,7 @@ Then execute `python run-keras.py -m t` to start training.
 ## Prediction
 
 Either do your own training or download the pre-trained checkpoints at
-(https://github.com/yisyang/coursera-ml-course-week6/releases/tag/v1.0)
+(https://github.com/yisyang/coursera-ml-course-week6/releases/tag/v1.1)
 
 Then put your example images into `./examples`.
 
