@@ -32,7 +32,7 @@ Either do your own training or download the pre-trained checkpoints at
 
 Then put your example images into `./examples`.
 
-Execute `python run-keras.py -m p -l 24` to start training,
+Execute `python run-keras.py -m p -l 24` to start predicting,
 where 24 is the last saved checkpoint under `./checkpoints`.
 
 
